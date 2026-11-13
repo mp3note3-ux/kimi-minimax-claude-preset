@@ -43,6 +43,12 @@ if ($toolName -in @('Read', 'Grep', 'Glob')) {
 if ($toolName -in @('Agent', 'Task')) {
     $subagentType = [string]$event.tool_input.subagent_type
     if ($subagentType -in @('minimax-worker', 'minimax-bulk-worker')) {
+        # The worker frontmatter pins MiniMax. Reject per-invocation model
+        # overrides that could route implementation back to Kimi or elsewhere.
+        $requestedModel = [string]$event.tool_input.model
+        if (-not [string]::IsNullOrWhiteSpace($requestedModel) -and $requestedModel -ne 'minimax-m2.5') {
+            Deny-ToolCall 'MiniMax worker model routing is pinned to minimax-m2.5. Do not override the worker model.'
+        }
         exit 0
     }
 
