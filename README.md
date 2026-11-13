@@ -19,15 +19,15 @@ A reusable project-level Claude Code configuration for a **Kimi K3 administrator
 
 Clone this preset once:
 
-    git clone https://github.com/mp3note3-ux/kimi-minimax-claude-preset.git "$HOME\tools\kimi-minimax-claude-preset"
+    git clone https://github.com/mp3note3-ux/kimi-minimax-claude-preset.git "$HOME\kimi-minimax-claude-preset"
 
 Apply it to a project:
 
-    & "$HOME\tools\kimi-minimax-claude-preset\Install-Preset.ps1" -ProjectPath "C:\path\to\your-project"
+    & "$HOME\kimi-minimax-claude-preset\Install-Preset.ps1" -ProjectPath "C:\path\to\your-project"
 
 By default, the installer does not overwrite preset-managed files that already exist with different content. If you intentionally want to replace the managed agent files, hook, and launcher, use:
 
-    & "$HOME\tools\kimi-minimax-claude-preset\Install-Preset.ps1" -ProjectPath "C:\path\to\your-project" -Force
+    & "$HOME\kimi-minimax-claude-preset\Install-Preset.ps1" -ProjectPath "C:\path\to\your-project" -Force
 
 With -Force, replaced files are backed up beside the originals. Existing CLAUDE.md content and other .claude/settings.json settings are preserved. The installer adds or updates only the managed preset section and the top-level agent selection.
 
@@ -40,14 +40,10 @@ From the project root:
 The installer sets agent = kimi-orchestrator in the project's .claude/settings.json, so the Kimi agent is also the project default when you launch Claude Code normally. The launcher:
 1. Changes to the project root.
 2. Removes ANTHROPIC_MODEL, CLAUDE_CODE_SUBAGENT_MODEL, and CLAUDE_CODE_SUBAGENT_MODEL_FORCE only from the launcher process environment so they cannot override the intended model routing.
-3. Sets a default maximum of one concurrent subagent to avoid unbounded parallel worker activity.
+3. Sets a default maximum of one concurrent subagent to limit simultaneous worker activity (this is not a per-session spending limit).
 4. Starts Claude Code with kimi-orchestrator and kimi-k3.
 
-You can pass additional Claude Code CLI arguments to the launcher:
-
-    .\Start-Kimi.ps1 --resume
-
-You can also launch directly after clearing model overrides in that PowerShell window:
+For a special CLI mode, clear the model overrides in that PowerShell window and launch Claude Code directly with the same agent selection:
 
     Remove-Item Env:ANTHROPIC_MODEL, Env:CLAUDE_CODE_SUBAGENT_MODEL, Env:CLAUDE_CODE_SUBAGENT_MODEL_FORCE -ErrorAction SilentlyContinue
     claude --agent kimi-orchestrator --model kimi-k3
