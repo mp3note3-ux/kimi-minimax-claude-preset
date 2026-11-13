@@ -28,6 +28,9 @@ foreach ($name in $overrides) {
     Remove-Item -Path "Env:$name" -ErrorAction SilentlyContinue
 }
 
+# Keep worker concurrency conservative by default. This is a concurrency cap, not a per-session spend cap.
+$env:CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS = '1'
+
 Write-Host "Starting Kimi K3 as the read-only project administrator."
 Write-Host "MiniMax M2.5 workers handle implementation, shell commands, tests, and available MCP tools."
 
