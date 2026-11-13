@@ -40,7 +40,8 @@ From the project root:
 The installer sets agent = kimi-orchestrator in the project's .claude/settings.json, so the Kimi agent is also the project default when you launch Claude Code normally. The launcher:
 1. Changes to the project root.
 2. Removes ANTHROPIC_MODEL, CLAUDE_CODE_SUBAGENT_MODEL, and CLAUDE_CODE_SUBAGENT_MODEL_FORCE only from the launcher process environment so they cannot override the intended model routing.
-3. Starts Claude Code with kimi-orchestrator and kimi-k3.
+3. Sets a default maximum of one concurrent subagent to avoid unbounded parallel worker activity.
+4. Starts Claude Code with kimi-orchestrator and kimi-k3.
 
 You can pass additional Claude Code CLI arguments to the launcher:
 
