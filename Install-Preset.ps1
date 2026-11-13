@@ -40,6 +40,7 @@ The Kimi agent uses an agent-scoped PreToolUse hook as its direct-tool enforceme
 
 <!-- END KIMI-MINIMAX PRESET -->
 '@
+$managedSection = $managedSection.TrimEnd([char[]]"`r`n")
 
 # Preflight all source files before changing the destination project.
 foreach ($relativePath in $managedFiles) {
