@@ -10,7 +10,7 @@ A reusable project-level Claude Code configuration for a **Kimi K3 administrator
 
 ## Requirements
 
-- Claude Code CLI v2.1.242 or later recommended (for the current /tasks model display; Agent subagent-type allowlist and frontmatter hooks require v2.1.116+).
+- Claude Code CLI v2.1.242 or later recommended (for the current /tasks model display; using agent frontmatter hooks in a main session requires v2.1.116+).
 - Windows PowerShell 5.1+ or PowerShell 7+ for the included installer, launcher, and read-only guard.
 - A working LiteLLM/Anthropic-compatible gateway exposing model aliases kimi-k3 and minimax-m2.5.
 - Configure each project's MCP servers separately. This preset never copies MCP credentials or API secrets.
@@ -52,7 +52,7 @@ For a special CLI mode, clear the model overrides in that PowerShell window and 
 
 The Kimi agent intentionally omits the frontmatter tools allowlist. Claude Code subagents inherit the tools available to the main conversation; using a read-only allowlist on Kimi would also deprive MiniMax of Bash, Edit, Write, and MCP tools.
 
-Instead, the Kimi profile attaches a PreToolUse hook only to kimi-orchestrator. The hook is default-deny: it permits Kimi to use only Read, Grep, Glob, and the Agent tool when the requested subagent type is minimax-worker or minimax-bulk-worker. It blocks Kimi's direct shell, write/edit, MCP, and other tool calls. The hook is scoped to the Kimi agent; it is not installed as a session-wide settings hook, so MiniMax workers retain their own tool access.
+Instead, the Kimi profile attaches a PreToolUse hook only to kimi-orchestrator. The hook is default-deny: it permits Kimi to use only Read, Grep, Glob, and the Agent tool when the requested subagent type is minimax-worker or minimax-bulk-worker. It also rejects a per-invocation worker model override unless it is minimax-m2.5. It blocks Kimi's direct shell, write/edit, MCP, and other tool calls. The hook is scoped to the Kimi agent; it is not installed as a session-wide settings hook, so MiniMax workers retain their own tool access.
 
 The worker agents omit a tools allowlist so they inherit the project's available tools, including available MCP tools. They set disallowedTools: Agent to prevent nested worker spawning.
 
