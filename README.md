@@ -1,18 +1,19 @@
 # Kimi K3 + MiniMax M2.5 Claude Code preset
 
-A reusable, project-level Claude Code setup for a **Kimi K3 administrator** and **MiniMax M2.5 implementation workers**.
+A reusable project-level Claude Code configuration for a **Kimi K3 administrator** and **MiniMax M2.5 implementation workers**.
 
 - Kimi plans, delegates, reads code, and reviews worker reports.
-- MiniMax handles implementation, shell commands, tests, and connected MCP tools.
-- Kimi's native agent tool allowlist excludes direct file writes, shell commands, and MCP tools.
-- The included PowerShell installer merges the preset into an existing repository without replacing unrelated project files.
+- MiniMax handles implementation, shell commands, tests, and the MCP tools configured for the project/session.
+- A Kimi-agent-scoped PreToolUse hook blocks all direct Kimi tools except Read, Grep, Glob, and delegation to the two named MiniMax workers.
+- MiniMax agents inherit the session tool pool, including available MCP tools, and cannot spawn nested agents.
+- The installer merges the preset into an existing repository without overwriting unrelated project files or settings.
 
 ## Requirements
 
-- Claude Code CLI v2.1.242 or later (for /tasks model verification; Agent(agent_type) allowlist syntax requires v2.1.63 or later).
-- Windows PowerShell 5.1+ or PowerShell 7+ for the included scripts.
-- A working LiteLLM/Anthropic-compatible gateway exposing the model aliases kimi-k3 and minimax-m2.5.
-- The target project must already have its own MCP servers configured if workers need them. This preset does not install or copy credentials.
+- Claude Code CLI v2.1.242 or later recommended (for the current /tasks model display; Agent subagent-type allowlist and frontmatter hooks require v2.1.116+).
+- Windows PowerShell 5.1+ or PowerShell 7+ for the included installer, launcher, and read-only guard.
+- A working LiteLLM/Anthropic-compatible gateway exposing model aliases kimi-k3 and minimax-m2.5.
+- Configure each project's MCP servers separately. This preset never copies MCP credentials or API secrets.
 
 ## Install into an existing project
 
@@ -24,11 +25,11 @@ Apply it to a project:
 
     & "$HOME\tools\kimi-minimax-claude-preset\Install-Preset.ps1" -ProjectPath "C:\path\to\your-project"
 
-By default, the installer does not overwrite existing files with the same managed names. If you intentionally want to replace the preset-managed agent files and launcher, use:
+By default, the installer does not overwrite preset-managed files that already exist with different content. If you intentionally want to replace the managed agent files, hook, and launcher, use:
 
     & "$HOME\tools\kimi-minimax-claude-preset\Install-Preset.ps1" -ProjectPath "C:\path\to\your-project" -Force
 
-With -Force, existing managed files are backed up beside the originals before replacement. Existing project CLAUDE.md content is preserved; the preset section is added once or updated in place.
+With -Force, replaced files are backed up beside the originals. Existing CLAUDE.md content and other .claude/settings.json settings are preserved. The installer adds or updates only the managed preset section and the top-level agent selection.
 
 ## Start a Kimi-led session
 
@@ -36,39 +37,29 @@ From the project root:
 
     .\Start-Kimi.ps1
 
-The launcher:
+The installer sets agent = kimi-orchestrator in the project's .claude/settings.json, so the Kimi agent is also the project default when you launch Claude Code normally. The launcher:
 1. Changes to the project root.
-2. Removes ANTHROPIC_MODEL, CLAUDE_CODE_SUBAGENT_MODEL, and CLAUDE_CODE_SUBAGENT_MODEL_FORCE only from the launcher process environment so they cannot override the project's model routing.
+2. Removes ANTHROPIC_MODEL, CLAUDE_CODE_SUBAGENT_MODEL, and CLAUDE_CODE_SUBAGENT_MODEL_FORCE only from the launcher process environment so they cannot override the intended model routing.
 3. Starts Claude Code with kimi-orchestrator and kimi-k3.
 
 You can pass additional Claude Code CLI arguments to the launcher:
 
     .\Start-Kimi.ps1 --resume
 
-You can also launch directly after clearing the conflicting environment variables in that PowerShell window:
+You can also launch directly after clearing model overrides in that PowerShell window:
 
     Remove-Item Env:ANTHROPIC_MODEL, Env:CLAUDE_CODE_SUBAGENT_MODEL, Env:CLAUDE_CODE_SUBAGENT_MODEL_FORCE -ErrorAction SilentlyContinue
     claude --agent kimi-orchestrator --model kimi-k3
 
-Important: the main-agent profile is activated by Start-Kimi.ps1 (or claude --agent kimi-orchestrator --model kimi-k3). Running plain claude does not automatically select this profile.
+## How the permission boundary works
 
-## Routing and permissions
+The Kimi agent intentionally omits the frontmatter tools allowlist. Claude Code subagents inherit the tools available to the main conversation; using a read-only allowlist on Kimi would also deprive MiniMax of Bash, Edit, Write, and MCP tools.
 
-| Role | Model | Intended capabilities |
-|---|---|---|
-| Main administrator | kimi-k3 | Read/search code; spawn only the two named MiniMax workers |
-| Routine worker | minimax-m2.5 | Read, edit, write, shell, tests, and available project MCP tools |
-| Bulk worker | minimax-m2.5 | Multi-file implementation, batch work, shell, tests, and available project MCP tools |
+Instead, the Kimi profile attaches a PreToolUse hook only to kimi-orchestrator. The hook is default-deny: it permits Kimi to use only Read, Grep, Glob, and the Agent tool when the requested subagent type is minimax-worker or minimax-bulk-worker. It blocks Kimi's direct shell, write/edit, MCP, and other tool calls. The hook is scoped to the Kimi agent; it is not installed as a session-wide settings hook, so MiniMax workers retain their own tool access.
 
-Kimi's tools frontmatter is an allowlist:
+The worker agents omit a tools allowlist so they inherit the project's available tools, including available MCP tools. They set disallowedTools: Agent to prevent nested worker spawning.
 
-    tools: Agent(minimax-worker, minimax-bulk-worker), Read, Grep, Glob
-
-This allows Kimi to inspect code and delegate only to the named worker types. It does not grant Kimi Bash, Edit, Write, or MCP tools.
-
-The MiniMax worker definitions intentionally do not set a restrictive tools allowlist. They inherit the tool pool configured for the project/session, including available MCP tools, and deny nested agent spawning. Configure the MCP servers in the target project or user Claude Code configuration as appropriate.
-
-The installer does not modify .claude/settings.json with global Bash, Edit, or Write deny rules. Such session-wide permission rules would also affect MiniMax workers and defeat the intended split.
+**Workspace trust is essential.** Claude Code only runs hooks in project-level agent definitions after you trust the project folder. Accept the Claude Code workspace trust prompt for the project before using the preset. If the project hooks are not trusted or do not load, do not use the Kimi session for work: its hook is the software enforcement boundary.
 
 ## Verify after installation
 
@@ -76,22 +67,23 @@ From the project root:
 
     claude plugin validate .claude/agents
 
-Then start the session with .\Start-Kimi.ps1 and check:
+Then start with .\Start-Kimi.ps1 and test both sides:
 
-1. Run /status and confirm the project agent is active.
-2. Ask Kimi to delegate a harmless read-only task to minimax-worker.
-3. Run /tasks and confirm the child task shows minimax-m2.5.
-4. Ask Kimi to run git status --short directly. It should not have a Bash tool available.
-5. Ask MiniMax to run the same harmless command. It should have its own Bash tool available (subject to normal Claude Code permissions).
+1. Run /status and confirm kimi-orchestrator is the active main agent.
+2. Ask Kimi to read README.md and report its first heading. This should work.
+3. Ask Kimi to run git status --short itself. The PreToolUse hook should block the direct shell tool call.
+4. Ask Kimi to delegate git status --short to minimax-worker. The worker should be able to use Bash and report the output.
+5. Run /tasks and confirm the child task shows minimax-m2.5.
+6. If the worker needs MCP, use /mcp to confirm the project MCP server is connected, then ask MiniMax to perform a safe read-only MCP diagnostic.
 
-If a worker cannot see an MCP tool, check that the MCP server is connected in /mcp and that the target project's server is available to subagents. This preset does not guess or hard-code MCP server names.
+If an MCP tool is missing from the worker, check that the server is connected and exposed to the session. This preset does not guess or hard-code MCP server names.
 
 ## What this preset does not do
 
 - It does not set an AWS or LiteLLM dollar budget. Configure budget enforcement at the gateway separately.
 - It does not create LiteLLM model aliases or install API credentials.
 - It does not guarantee savings by itself. Kimi still uses tokens for planning, delegation, and reviewing reports.
-- Tool restrictions apply to Claude Code's tool calls, not to separate programs that a process could run outside Claude Code. Keep the Kimi allowlist narrow and do not add shell or MCP tools to it.
+- The Kimi restriction is enforced by Claude Code's PreToolUse hook, not by a model instruction alone. Project-level hooks require workspace trust and should be reviewed like any executable script.
 
 ## Updating the preset
 
